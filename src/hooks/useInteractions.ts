@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Interaction, InteractionType, Sentiment } from '@/types/database';
+import type { InteractionType, Sentiment } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  createInteractionSchema, 
+  validateInput,
+} from '@/lib/validation';
 
 interface CreateInteractionInput {
   client_id: string;
@@ -44,14 +48,26 @@ export function useInteractions(clientId?: string) {
     mutationFn: async (input: CreateInteractionInput) => {
       if (!organization || !user) throw new Error('Not authenticated');
       
+      // Validate input before sending to database
+      const validation = validateInput(createInteractionSchema, input);
+      if (validation.success === false) {
+        throw new Error(validation.error);
+      }
+      
+      const insertData = {
+        client_id: validation.data.client_id,
+        type: validation.data.type,
+        subject: validation.data.subject || null,
+        details: validation.data.details || null,
+        sentiment: validation.data.sentiment || null,
+        organization_id: organization.id,
+        created_by: user.id,
+        interaction_date: validation.data.interaction_date || new Date().toISOString(),
+      };
+
       const { data, error } = await supabase
         .from('interactions')
-        .insert({
-          ...input,
-          organization_id: organization.id,
-          created_by: user.id,
-          interaction_date: input.interaction_date || new Date().toISOString(),
-        })
+        .insert(insertData)
         .select()
         .single();
 

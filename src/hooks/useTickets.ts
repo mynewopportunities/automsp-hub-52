@@ -1,8 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Ticket, TicketStatus, TicketPriority } from '@/types/database';
+import type { TicketStatus, TicketPriority } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  createTicketSchema, 
+  updateTicketSchema, 
+  validateInput,
+} from '@/lib/validation';
 
 interface CreateTicketInput {
   client_id: string;
@@ -52,13 +57,26 @@ export function useTickets(clientId?: string) {
     mutationFn: async (input: CreateTicketInput) => {
       if (!organization || !user) throw new Error('Not authenticated');
       
+      // Validate input before sending to database
+      const validation = validateInput(createTicketSchema, input);
+      if (validation.success === false) {
+        throw new Error(validation.error);
+      }
+      
+      const insertData = {
+        client_id: validation.data.client_id,
+        subject: validation.data.subject,
+        description: validation.data.description || null,
+        priority: validation.data.priority || null,
+        sla_due_date: validation.data.sla_due_date || null,
+        assigned_to: validation.data.assigned_to || null,
+        organization_id: organization.id,
+        created_by: user.id,
+      };
+
       const { data, error } = await supabase
         .from('tickets')
-        .insert({
-          ...input,
-          organization_id: organization.id,
-          created_by: user.id,
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -76,6 +94,12 @@ export function useTickets(clientId?: string) {
 
   const updateTicket = useMutation({
     mutationFn: async ({ id, ...input }: UpdateTicketInput) => {
+      // Validate input before sending to database
+      const validation = validateInput(updateTicketSchema, { id, ...input });
+      if (validation.success === false) {
+        throw new Error(validation.error);
+      }
+      
       const { data, error } = await supabase
         .from('tickets')
         .update({

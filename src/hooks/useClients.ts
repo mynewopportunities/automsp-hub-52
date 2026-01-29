@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Client, RiskLevel } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  createClientSchema, 
+  updateClientSchema, 
+  validateInput,
+} from '@/lib/validation';
 
 interface CreateClientInput {
   name: string;
@@ -48,12 +53,29 @@ export function useClients() {
     mutationFn: async (input: CreateClientInput) => {
       if (!organization) throw new Error('No organization');
       
+      // Validate input before sending to database
+      const validation = validateInput(createClientSchema, input);
+      if (validation.success === false) {
+        throw new Error(validation.error);
+      }
+      
+      // Transform empty strings to null for optional fields
+      const cleanedInput = {
+        name: validation.data.name,
+        contact_name: validation.data.contact_name || null,
+        contact_email: validation.data.contact_email || null,
+        contact_phone: validation.data.contact_phone || null,
+        contract_value: validation.data.contract_value || null,
+        contract_start_date: validation.data.contract_start_date || null,
+        contract_end_date: validation.data.contract_end_date || null,
+        assigned_to: validation.data.assigned_to || null,
+        notes: validation.data.notes || null,
+        organization_id: organization.id,
+      };
+      
       const { data, error } = await supabase
         .from('clients')
-        .insert({
-          ...input,
-          organization_id: organization.id,
-        })
+        .insert(cleanedInput)
         .select()
         .single();
 
@@ -71,6 +93,12 @@ export function useClients() {
 
   const updateClient = useMutation({
     mutationFn: async ({ id, ...input }: UpdateClientInput) => {
+      // Validate input before sending to database
+      const validation = validateInput(updateClientSchema, { id, ...input });
+      if (validation.success === false) {
+        throw new Error(validation.error);
+      }
+      
       const { data, error } = await supabase
         .from('clients')
         .update(input)

@@ -163,6 +163,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_portal_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_portal_tokens_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -258,6 +265,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_secure"
             referencedColumns: ["id"]
           },
           {
@@ -416,6 +430,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tickets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tickets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -426,13 +447,116 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clients_secure: {
+        Row: {
+          assigned_to: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          contract_value: number | null
+          created_at: string | null
+          health_score: number | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          organization_id: string | null
+          risk_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_email?: never
+          contact_name?: never
+          contact_phone?: never
+          contract_end_date?: never
+          contract_start_date?: never
+          contract_value?: never
+          created_at?: string | null
+          health_score?: number | null
+          id?: string | null
+          name?: string | null
+          notes?: never
+          organization_id?: string | null
+          risk_level?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_email?: never
+          contact_name?: never
+          contact_phone?: never
+          contract_end_date?: never
+          contract_start_date?: never
+          contract_value?: never
+          created_at?: string | null
+          health_score?: number | null
+          id?: string | null
+          name?: string | null
+          notes?: never
+          organization_id?: string | null
+          risk_level?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations_secure: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          last_sync_at: string | null
+          name: string | null
+          organization_id: string | null
+          service: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name?: string | null
+          organization_id?: string | null
+          service?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name?: string | null
+          organization_id?: string | null
+          service?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_manage_client: {
         Args: { client_uuid: string; user_uuid: string }
         Returns: boolean
       }
+      cleanup_expired_tokens: { Args: never; Returns: number }
       get_user_org_id: { Args: { user_uuid: string }; Returns: string }
       get_user_role: {
         Args: { user_uuid: string }
