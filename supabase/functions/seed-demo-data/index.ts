@@ -1,9 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Production-grade CORS
+const ALLOWED_ORIGINS = [
+  "https://id-preview--6cae4156-351f-4189-9a7f-f358f4b517e6.lovable.app",
+  "https://automsp.lovable.app",
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const isDev = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isDev);
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+  };
+}
 
 const DEMO_CLIENTS = [
   { name: "TechFlow Solutions", contact_name: "Sarah Chen", contact_email: "sarah@techflow.io", contract_value: 48000, health_score: 92, risk_level: "low" },
@@ -50,8 +63,18 @@ const INTERACTION_SUBJECTS = [
 ];
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -70,26 +93,34 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
 
     // Get the user's organization
     const { data: membership, error: membershipError } = await supabase
       .from("organization_memberships")
-      .select("organization_id")
+      .select("organization_id, role")
       .eq("user_id", userId)
       .single();
 
     if (membershipError || !membership) {
       return new Response(JSON.stringify({ error: "No organization found" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Only admins can seed demo data
+    if (membership.role !== 'admin') {
+      return new Response(JSON.stringify({ error: "Admin access required" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -114,8 +145,8 @@ Deno.serve(async (req) => {
       ...client,
       organization_id: organizationId,
       assigned_to: userId,
-      contract_start_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      contract_end_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+      contract_start_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      contract_end_date: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: `Demo client for ${client.name}`,
     }));
 
@@ -126,7 +157,10 @@ Deno.serve(async (req) => {
 
     if (clientsError) {
       console.error("Error inserting clients:", clientsError);
-      throw clientsError;
+      return new Response(JSON.stringify({ error: "Failed to seed clients" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Insert demo tickets
@@ -158,7 +192,7 @@ Deno.serve(async (req) => {
     const { error: ticketsError } = await supabase.from("tickets").insert(ticketsToInsert);
     if (ticketsError) {
       console.error("Error inserting tickets:", ticketsError);
-      throw ticketsError;
+      // Continue anyway, clients were created
     }
 
     // Insert demo interactions
@@ -185,7 +219,7 @@ Deno.serve(async (req) => {
     const { error: interactionsError } = await supabase.from("interactions").insert(interactionsToInsert);
     if (interactionsError) {
       console.error("Error inserting interactions:", interactionsError);
-      throw interactionsError;
+      // Continue anyway
     }
 
     return new Response(
@@ -203,8 +237,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Error seeding demo data:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...getCorsHeaders(origin), "Content-Type": "application/json" } }
     );
   }
 });
