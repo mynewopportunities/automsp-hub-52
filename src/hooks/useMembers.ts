@@ -5,7 +5,7 @@ import type { AppRole } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
 export function useMembers() {
-  const { organization, role } = useAuth();
+  const { organization } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -26,10 +26,10 @@ export function useMembers() {
     enabled: !!organization,
   });
 
+  // Role checks removed - RLS policies enforce authorization server-side
+  // Client-side role checks provide false security and can be bypassed
   const updateMemberRole = useMutation({
     mutationFn: async ({ membershipId, newRole }: { membershipId: string; newRole: AppRole }) => {
-      if (role !== 'admin') throw new Error('Only admins can update roles');
-      
       const { data, error } = await supabase
         .from('organization_memberships')
         .update({ role: newRole })
@@ -49,10 +49,9 @@ export function useMembers() {
     },
   });
 
+  // Role checks removed - RLS policies enforce authorization server-side
   const removeMember = useMutation({
     mutationFn: async (membershipId: string) => {
-      if (role !== 'admin') throw new Error('Only admins can remove members');
-      
       const { error } = await supabase
         .from('organization_memberships')
         .delete()
