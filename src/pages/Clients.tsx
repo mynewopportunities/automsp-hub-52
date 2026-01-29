@@ -266,7 +266,7 @@ export default function Clients() {
               {filteredClients.map((client) => (
                 <TableRow key={client.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
-                    <Link to={`/clients/${client.id}`} className="block">
+                    <Link to={`/portal/clients/${client.id}`} className="block">
                       <div className="font-medium">{client.name}</div>
                     </Link>
                   </TableCell>
