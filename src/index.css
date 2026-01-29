@@ -1,55 +1,68 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* AutoMSP Enterprise Design System
-   Professional color palette with risk-level accents
-   All colors are HSL for proper theming */
+/* AutoMSP Design System - Soliur-Inspired Theme */
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    /* Core Brand Colors - Soliur Inspired */
+    --background: 45 20% 97%;
+    --foreground: 0 0% 0%;
 
-    /* Card and surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 0%;
 
-    /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Primary - Deep enterprise blue */
-    --primary: 217 91% 33%;
+    /* Soliur Green - Primary */
+    --primary: 109 51% 47%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Subtle blue-gray */
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
+    /* Soliur Orange - Accent/CTA */
+    --secondary: 21 100% 58%;
+    --secondary-foreground: 0 0% 100%;
 
-    /* Muted - Light gray for subtle elements */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted surfaces */
+    --muted: 40 23% 95%;
+    --muted-foreground: 220 9% 35%;
 
-    /* Accent - Teal for highlights */
-    --accent: 173 58% 39%;
+    /* Green accent */
+    --accent: 109 51% 47%;
     --accent-foreground: 0 0% 100%;
 
-    /* Destructive - Error states */
+    /* Orange CTA */
+    --cta: 21 100% 58%;
+    --cta-foreground: 0 0% 100%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders and inputs */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 33%;
+    --border: 220 14% 89%;
+    --input: 220 14% 89%;
+    --ring: 109 51% 47%;
 
     --radius: 0.5rem;
 
-    /* Risk level colors */
+    /* Custom gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(220 20% 15%) 50%, hsl(109 30% 10%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(109 51% 47%) 0%, hsl(109 60% 40%) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(21 100% 58%) 0%, hsl(30 100% 50%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    --gradient-light: linear-gradient(180deg, hsl(45 20% 97%) 0%, hsl(40 23% 95%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
+    --shadow-glow-green: 0 0 40px hsl(109 51% 47% / 0.3);
+    --shadow-glow-orange: 0 0 30px hsl(21 100% 58% / 0.4);
+
+    /* Risk level colors - for dashboard */
     --risk-low: 142 71% 45%;
     --risk-medium: 38 92% 50%;
     --risk-high: 15 90% 55%;
@@ -67,61 +80,64 @@
     --status-pending: 38 92% 50%;
     --status-inactive: 215 16% 47%;
 
-    /* Sidebar */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
+    /* Sidebar - dark for dashboard */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 109 51% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 30% 18%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 30% 22%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 109 51% 47%;
 
     /* Chart colors for dashboard */
-    --chart-1: 217 91% 33%;
-    --chart-2: 173 58% 39%;
+    --chart-1: 109 51% 47%;
+    --chart-2: 21 100% 58%;
     --chart-3: 38 92% 50%;
     --chart-4: 142 71% 45%;
     --chart-5: 0 84% 60%;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 8%;
+    --foreground: 0 0% 100%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 12%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 109 51% 47%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 30% 22%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 21 100% 58%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217 30% 18%;
+    --muted: 220 20% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 173 58% 45%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 109 51% 47%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
+    --cta: 21 100% 58%;
+    --cta-foreground: 0 0% 100%;
 
-    --border: 217 30% 22%;
-    --input: 217 30% 22%;
-    --ring: 217 91% 60%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --sidebar-background: 222 55% 6%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 109 51% 47%;
+
+    --sidebar-background: 220 20% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 109 51% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 30% 12%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 30% 15%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 220 20% 20%;
+    --sidebar-ring: 109 51% 47%;
   }
 }
 
@@ -130,13 +146,112 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 17px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 18px;
+    }
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-bold;
+    line-height: 1.2;
+  }
+
+  h1 {
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl;
+  }
+
+  h2 {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl;
+  }
+
+  h3 {
+    @apply text-xl sm:text-2xl md:text-3xl;
+  }
+
+  h4 {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  p, li {
+    @apply text-base sm:text-lg;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl;
+  }
+
+  .glass-dark {
+    @apply bg-foreground/90 backdrop-blur-xl border border-primary-foreground/10 rounded-xl;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .gradient-text-orange {
+    @apply bg-gradient-to-r from-secondary to-cta bg-clip-text text-transparent;
+  }
+
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .section-title {
+    @apply relative inline-block uppercase text-xs font-bold tracking-widest text-primary;
+  }
+
+  .section-title::before {
+    content: '';
+    @apply absolute -left-8 top-1/2 -translate-y-1/2 w-5 h-0.5 bg-primary;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+  }
+
+  /* Soliur-style decorative elements */
+  .decoration-blob {
+    @apply absolute rounded-full blur-3xl opacity-20;
+  }
+
+  .decoration-line {
+    @apply absolute h-0.5 bg-gradient-to-r from-primary to-transparent;
   }
 }
 
 @layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
   .risk-low {
     @apply bg-[hsl(var(--risk-low))] text-white;
   }
@@ -149,4 +264,68 @@
   .risk-critical {
     @apply bg-[hsl(var(--risk-critical))] text-white;
   }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out forwards;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-400 {
+  animation-delay: 400ms;
+}
+
+.animation-delay-600 {
+  animation-delay: 600ms;
+}
+
+.animation-delay-800 {
+  animation-delay: 800ms;
 }

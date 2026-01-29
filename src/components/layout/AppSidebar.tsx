@@ -37,17 +37,17 @@ import {
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Clients', url: '/clients', icon: Building2 },
-  { title: 'Interactions', url: '/interactions', icon: MessageSquare },
-  { title: 'Tickets', url: '/tickets', icon: Ticket },
+  { title: 'Dashboard', url: '/portal', icon: LayoutDashboard },
+  { title: 'Clients', url: '/portal/clients', icon: Building2 },
+  { title: 'Interactions', url: '/portal/interactions', icon: MessageSquare },
+  { title: 'Tickets', url: '/portal/tickets', icon: Ticket },
 ];
 
 const adminNavItems = [
-  { title: 'Integrations', url: '/integrations', icon: Link2 },
-  { title: 'Reports', url: '/reports', icon: FileText },
-  { title: 'Team', url: '/team', icon: Users },
-  { title: 'Settings', url: '/settings', icon: Settings },
+  { title: 'Integrations', url: '/portal/integrations', icon: Link2 },
+  { title: 'Reports', url: '/portal/reports', icon: FileText },
+  { title: 'Team', url: '/portal/team', icon: Users },
+  { title: 'Settings', url: '/portal/settings', icon: Settings },
 ];
 
 export function AppSidebar() {
