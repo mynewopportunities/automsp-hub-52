@@ -1,18 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Production-grade CORS - restrict to known origins
+const ALLOWED_ORIGINS = [
+  "https://id-preview--6cae4156-351f-4189-9a7f-f358f4b517e6.lovable.app",
+  "https://automsp.lovable.app",
+];
 
-// Generate a random token
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const isDev = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isDev);
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+// Cryptographically secure token generation
 function generateToken(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  const array = new Uint8Array(24);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => b.toString(36).padStart(2, '0')).join('').slice(0, 32);
 }
 
 // Hash token for storage
@@ -24,9 +34,47 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Input validation
+function validateEmail(email: unknown): string | null {
+  if (typeof email !== 'string') return null;
+  const trimmed = email.trim().toLowerCase();
+  // Basic email validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+  if (trimmed.length > 254) return null;
+  return trimmed;
+}
+
+function validateUUID(id: unknown): string | null {
+  if (typeof id !== 'string') return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  return id;
+}
+
+function sanitizeString(input: unknown, maxLength: number = 100): string | null {
+  if (typeof input !== 'string') return null;
+  return input.trim().slice(0, maxLength);
+}
+
+function validateExpiresDays(days: unknown): number | null {
+  if (days === undefined || days === null) return null;
+  const num = Number(days);
+  if (isNaN(num) || num < 1 || num > 365) return null;
+  return Math.floor(num);
+}
+
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -45,31 +93,50 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
 
-    const body = await req.json();
-    const { client_id, email, name, expires_days } = body;
-
-    if (!client_id || !email) {
-      return new Response(JSON.stringify({ error: "client_id and email are required" }), {
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify user has access to this client
+    const clientId = validateUUID(body.client_id);
+    const email = validateEmail(body.email);
+    const name = sanitizeString(body.name, 100);
+    const expiresDays = validateExpiresDays(body.expires_days);
+
+    if (!clientId) {
+      return new Response(JSON.stringify({ error: "Valid client_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Valid email is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify user has access to this client (RLS will enforce this)
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, organization_id, name")
-      .eq("id", client_id)
+      .eq("id", clientId)
       .single();
 
     if (clientError || !client) {
@@ -79,32 +146,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Generate token
+    // Verify user is admin or account manager
+    const { data: membership, error: membershipError } = await supabase
+      .from("organization_memberships")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("organization_id", client.organization_id)
+      .single();
+
+    if (membershipError || !membership || !['admin', 'account_manager'].includes(membership.role)) {
+      return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Generate cryptographically secure token
     const accessToken = generateToken();
     const tokenHash = await hashToken(accessToken);
 
-    // Calculate expiration
-    const expiresAt = expires_days 
-      ? new Date(Date.now() + expires_days * 24 * 60 * 60 * 1000).toISOString()
-      : null;
+    // Calculate expiration (default 30 days if not specified)
+    const effectiveExpireDays = expiresDays || 30;
+    const expiresAt = new Date(Date.now() + effectiveExpireDays * 24 * 60 * 60 * 1000).toISOString();
 
-    // Deactivate existing tokens for this email/client combo
-    await supabase
-      .from("customer_portal_tokens")
-      .update({ is_active: false })
-      .eq("client_id", client_id)
-      .eq("email", email);
-
-    // Insert new token using service role to bypass RLS
+    // Use service role to bypass RLS for token management
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Deactivate existing tokens for this email/client combo
+    await serviceClient
+      .from("customer_portal_tokens")
+      .update({ is_active: false })
+      .eq("client_id", clientId)
+      .eq("email", email);
+
+    // Insert new token
     const { error: insertError } = await serviceClient
       .from("customer_portal_tokens")
       .insert({
-        client_id,
+        client_id: clientId,
         organization_id: client.organization_id,
         token_hash: tokenHash,
         email,
@@ -114,11 +196,15 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error("Error creating token:", insertError);
-      throw insertError;
+      return new Response(JSON.stringify({ error: "Failed to create token" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Generate portal URL
-    const portalUrl = `${req.headers.get("origin") || ""}/customer-portal/login?token=${accessToken}`;
+    // Generate portal URL - use origin or fallback
+    const baseUrl = origin || "https://automsp.lovable.app";
+    const portalUrl = `${baseUrl}/customer-portal/login?token=${accessToken}`;
 
     return new Response(JSON.stringify({
       success: true,
@@ -131,8 +217,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Token generation error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...getCorsHeaders(origin), "Content-Type": "application/json" } }
     );
   }
 });

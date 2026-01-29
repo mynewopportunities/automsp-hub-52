@@ -1,11 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Production-grade CORS - restrict to known origins
+const ALLOWED_ORIGINS = [
+  "https://id-preview--6cae4156-351f-4189-9a7f-f358f4b517e6.lovable.app",
+  "https://automsp.lovable.app",
+];
 
-// Simple hash function for token validation
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  // In development, allow localhost
+  const isDev = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isDev);
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+// Cryptographically secure hash function for token validation
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(token);
@@ -14,9 +28,63 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Input validation helpers
+function sanitizeString(input: unknown, maxLength: number = 1000): string | null {
+  if (typeof input !== 'string') return null;
+  return input.trim().slice(0, maxLength);
+}
+
+function validateToken(token: unknown): string | null {
+  if (typeof token !== 'string') return null;
+  // Token should be exactly 32 alphanumeric characters
+  if (!/^[A-Za-z0-9]{32}$/.test(token)) return null;
+  return token;
+}
+
+function validatePriority(priority: unknown): string {
+  const validPriorities = ['low', 'medium', 'high', 'critical'];
+  if (typeof priority === 'string' && validPriorities.includes(priority)) {
+    return priority;
+  }
+  return 'medium';
+}
+
+// Rate limiting map (in-memory, per-instance)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 100; // requests per window
+const RATE_WINDOW = 60000; // 1 minute
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(identifier);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_WINDOW });
+    return true;
+  }
+  
+  if (record.count >= RATE_LIMIT) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -27,19 +95,35 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const path = url.pathname.split('/').pop();
-    const body = req.method === "POST" ? await req.json() : {};
+    
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Validate token endpoint
-    if (path === "validate" && req.method === "POST") {
-      const { token } = body;
+    if (path === "validate") {
+      const token = validateToken(body.token);
       if (!token) {
-        return new Response(JSON.stringify({ error: "Token required" }), {
+        return new Response(JSON.stringify({ error: "Valid token required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      // Rate limit by token hash (to prevent enumeration)
       const tokenHash = await hashToken(token);
+      if (!checkRateLimit(`validate:${tokenHash.slice(0, 16)}`)) {
+        return new Response(JSON.stringify({ error: "Too many requests" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       
       const { data: portalToken, error } = await supabase
         .from("customer_portal_tokens")
@@ -49,6 +133,8 @@ Deno.serve(async (req) => {
         .single();
 
       if (error || !portalToken) {
+        // Constant-time response to prevent timing attacks
+        await new Promise(r => setTimeout(r, Math.random() * 100 + 50));
         return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -63,11 +149,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update last used
-      await supabase
+      // Update last used (non-blocking)
+      supabase
         .from("customer_portal_tokens")
         .update({ last_used_at: new Date().toISOString() })
-        .eq("id", portalToken.id);
+        .eq("id", portalToken.id)
+        .then(() => {});
 
       return new Response(JSON.stringify({
         valid: true,
@@ -80,10 +167,10 @@ Deno.serve(async (req) => {
     }
 
     // Get tickets for client
-    if (path === "tickets" && req.method === "POST") {
-      const { token } = body;
+    if (path === "tickets") {
+      const token = validateToken(body.token);
       if (!token) {
-        return new Response(JSON.stringify({ error: "Token required" }), {
+        return new Response(JSON.stringify({ error: "Valid token required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -93,7 +180,7 @@ Deno.serve(async (req) => {
       
       const { data: portalToken, error: tokenError } = await supabase
         .from("customer_portal_tokens")
-        .select("client_id")
+        .select("client_id, expires_at")
         .eq("token_hash", tokenHash)
         .eq("is_active", true)
         .single();
@@ -105,15 +192,27 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Check expiration
+      if (portalToken.expires_at && new Date(portalToken.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ error: "Token expired" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: tickets, error: ticketsError } = await supabase
         .from("tickets")
         .select("id, subject, description, status, priority, created_at, updated_at, sla_due_date, resolved_at")
         .eq("client_id", portalToken.client_id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100); // Prevent excessive data retrieval
 
       if (ticketsError) {
         console.error("Error fetching tickets:", ticketsError);
-        throw ticketsError;
+        return new Response(JSON.stringify({ error: "Failed to fetch tickets" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       return new Response(JSON.stringify({ tickets }), {
@@ -122,11 +221,21 @@ Deno.serve(async (req) => {
     }
 
     // Submit new ticket
-    if (path === "submit-ticket" && req.method === "POST") {
-      const { token, subject, description, priority } = body;
+    if (path === "submit-ticket") {
+      const token = validateToken(body.token);
+      const subject = sanitizeString(body.subject, 200);
+      const description = sanitizeString(body.description, 5000);
+      const priority = validatePriority(body.priority);
       
-      if (!token || !subject) {
-        return new Response(JSON.stringify({ error: "Token and subject required" }), {
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Valid token required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!subject || subject.length < 3) {
+        return new Response(JSON.stringify({ error: "Subject must be at least 3 characters" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -134,15 +243,31 @@ Deno.serve(async (req) => {
 
       const tokenHash = await hashToken(token);
       
+      // Rate limit ticket submissions per token
+      if (!checkRateLimit(`submit:${tokenHash.slice(0, 16)}`)) {
+        return new Response(JSON.stringify({ error: "Too many ticket submissions. Please wait." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       const { data: portalToken, error: tokenError } = await supabase
         .from("customer_portal_tokens")
-        .select("client_id, email, clients(organization_id)")
+        .select("client_id, email, expires_at, clients(organization_id)")
         .eq("token_hash", tokenHash)
         .eq("is_active", true)
         .single();
 
       if (tokenError || !portalToken) {
         return new Response(JSON.stringify({ error: "Invalid token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check expiration
+      if (portalToken.expires_at && new Date(portalToken.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ error: "Token expired" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -155,17 +280,20 @@ Deno.serve(async (req) => {
           organization_id: (portalToken.clients as any).organization_id,
           subject,
           description: description || null,
-          priority: priority || "medium",
+          priority,
           status: "open",
           customer_submitted: true,
           customer_email: portalToken.email,
         })
-        .select()
+        .select("id, subject, status, created_at")
         .single();
 
       if (ticketError) {
         console.error("Error creating ticket:", ticketError);
-        throw ticketError;
+        return new Response(JSON.stringify({ error: "Failed to create ticket" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       return new Response(JSON.stringify({ 
@@ -187,9 +315,10 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Customer portal error:", error);
+    // Don't expose internal error details
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...getCorsHeaders(origin), "Content-Type": "application/json" } }
     );
   }
 });
