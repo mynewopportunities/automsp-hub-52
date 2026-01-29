@@ -117,6 +117,60 @@ export type Database = {
           },
         ]
       }
+      customer_portal_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string | null
+          organization_id: string
+          token_hash: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string | null
+          organization_id: string
+          token_hash: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string | null
+          organization_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_portal_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           config: Json
@@ -307,6 +361,8 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string | null
+          customer_email: string | null
+          customer_submitted: boolean | null
           description: string | null
           id: string
           organization_id: string
@@ -322,6 +378,8 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by?: string | null
+          customer_email?: string | null
+          customer_submitted?: boolean | null
           description?: string | null
           id?: string
           organization_id: string
@@ -337,6 +395,8 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string | null
+          customer_email?: string | null
+          customer_submitted?: boolean | null
           description?: string | null
           id?: string
           organization_id?: string

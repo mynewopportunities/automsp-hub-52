@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CustomerPortalProvider } from "@/contexts/CustomerPortalContext";
 import { lazy, Suspense } from "react";
 
 // Eager load critical pages
@@ -35,6 +36,13 @@ import Settings from "./pages/Settings";
 import Integrations from "./pages/Integrations";
 import Reports from "./pages/Reports";
 
+// Customer Portal pages
+import CustomerPortalLayout from "./components/layout/CustomerPortalLayout";
+import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
+import CustomerPortalDashboard from "./pages/customer-portal/CustomerPortalDashboard";
+import CustomerPortalTickets from "./pages/customer-portal/CustomerPortalTickets";
+import CustomerPortalNewTicket from "./pages/customer-portal/CustomerPortalNewTicket";
+
 const queryClient = new QueryClient();
 
 // Loading fallback for lazy loaded pages
@@ -52,44 +60,54 @@ const PageLoader = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public marketing routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/solutions" element={<Solutions />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/why-automsp" element={<WhyAutoMSP />} />
-              <Route path="/resources" element={<Resources />} />
+      <CustomerPortalProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public marketing routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/solutions" element={<Solutions />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/why-automsp" element={<WhyAutoMSP />} />
+                <Route path="/resources" element={<Resources />} />
 
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/onboarding" element={<Onboarding />} />
+                {/* Auth routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/onboarding" element={<Onboarding />} />
 
-              {/* App routes (protected portal/dashboard) */}
-              <Route path="/portal" element={<AppLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="clients/:id" element={<ClientDetail />} />
-                <Route path="interactions" element={<Interactions />} />
-                <Route path="tickets" element={<Tickets />} />
-                <Route path="team" element={<Team />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="integrations" element={<Integrations />} />
-                <Route path="reports" element={<Reports />} />
-              </Route>
+                {/* App routes (protected portal/dashboard) */}
+                <Route path="/portal" element={<AppLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="clients" element={<Clients />} />
+                  <Route path="clients/:id" element={<ClientDetail />} />
+                  <Route path="interactions" element={<Interactions />} />
+                  <Route path="tickets" element={<Tickets />} />
+                  <Route path="team" element={<Team />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="integrations" element={<Integrations />} />
+                  <Route path="reports" element={<Reports />} />
+                </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
+                {/* Customer Portal routes */}
+                <Route path="/customer-portal/login" element={<CustomerPortalLogin />} />
+                <Route path="/customer-portal" element={<CustomerPortalLayout />}>
+                  <Route index element={<CustomerPortalDashboard />} />
+                  <Route path="tickets" element={<CustomerPortalTickets />} />
+                  <Route path="tickets/new" element={<CustomerPortalNewTicket />} />
+                </Route>
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CustomerPortalProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
