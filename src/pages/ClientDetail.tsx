@@ -60,6 +60,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { InteractionType, Sentiment } from '@/types/database';
+import { CustomerPortalTokenGenerator } from '@/components/clients/CustomerPortalTokenGenerator';
 
 const riskBadgeVariants = {
   low: 'bg-risk-low/10 text-risk-low border-risk-low/20',
@@ -179,6 +180,12 @@ export default function ClientDetail() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
+            <CustomerPortalTokenGenerator
+              clientId={client.id}
+              clientName={client.name}
+              contactEmail={client.contact_email || undefined}
+              contactName={client.contact_name || undefined}
+            />
             <Button variant="outline" size="sm">
               <Edit className="h-4 w-4 mr-2" />
               Edit

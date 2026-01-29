@@ -180,7 +180,7 @@ export default function Dashboard() {
               <CardDescription>Clients requiring immediate attention</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/clients?filter=at-risk">View all</Link>
+              <Link to="/portal/clients?filter=at-risk">View all</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -194,7 +194,7 @@ export default function Dashboard() {
                 {stats.atRiskClients.map((client) => (
                   <Link
                     key={client.id}
-                    to={`/clients/${client.id}`}
+                    to={`/portal/clients/${client.id}`}
                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
