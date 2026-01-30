@@ -23,6 +23,21 @@ const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
 const WhyAutoMSP = lazy(() => import("./pages/WhyAutoMSP"));
 const Resources = lazy(() => import("./pages/Resources"));
+const Careers = lazy(() => import("./pages/Careers"));
+const Support = lazy(() => import("./pages/Support"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+
+// Lazy load solution sub-pages
+const AITriage = lazy(() => import("./pages/solutions/AITriage"));
+const IntelligentWorkflows = lazy(() => import("./pages/solutions/IntelligentWorkflows"));
+const ComplianceSLA = lazy(() => import("./pages/solutions/ComplianceSLA"));
+
+// Lazy load resource sub-pages
+const Blog = lazy(() => import("./pages/resources/Blog"));
+const CaseStudies = lazy(() => import("./pages/resources/CaseStudies"));
+const Whitepapers = lazy(() => import("./pages/resources/Whitepapers"));
+const Webinars = lazy(() => import("./pages/resources/Webinars"));
 
 // App pages (dashboard/portal)
 import AppLayout from "./components/layout/AppLayout";
@@ -70,11 +85,22 @@ const App = () => (
                 {/* Public marketing routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/solutions" element={<Solutions />} />
+                <Route path="/solutions/ai-triage" element={<AITriage />} />
+                <Route path="/solutions/intelligent-workflows" element={<IntelligentWorkflows />} />
+                <Route path="/solutions/compliance-sla" element={<ComplianceSLA />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/why-automsp" element={<WhyAutoMSP />} />
                 <Route path="/resources" element={<Resources />} />
+                <Route path="/resources/blog" element={<Blog />} />
+                <Route path="/resources/case-studies" element={<CaseStudies />} />
+                <Route path="/resources/whitepapers" element={<Whitepapers />} />
+                <Route path="/resources/webinars" element={<Webinars />} />
+                <Route path="/careers" element={<Careers />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
 
                 {/* Auth routes */}
                 <Route path="/login" element={<Login />} />
